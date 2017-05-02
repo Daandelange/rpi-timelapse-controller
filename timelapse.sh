@@ -5,7 +5,7 @@
 # run with sudo so it can reset itself via lsusb when gphoto crashes
 
 # Setup the pin that controls the light switch
-LIGHT_PIN=6
+LIGHT_PIN=11
 
 # timelapse trigger delay in seconds
 # real delay is DELAY_BETWEEN_SHOTS + trigger execution time
@@ -14,6 +14,7 @@ DELAY_BETWEEN_SHOTS=900
 # enter your vender:id of camera id (lsusb in shell to get it)
 # it is used to reset usb port. (You can leave this empty.)
 CAMERA_USB_VENDOR=04a9:3084
+# Canon, Inc. EOS 300D / EOS Digital Rebel
 
 # Note
 # In order to work as root (by executing on boot using init.d for example)
@@ -28,11 +29,13 @@ CAMERA_USB_VENDOR=04a9:3084
 /usr/local/bin/gpio mode $LIGHT_PIN out
 
 # cd into photo dir ( changeme )
+mkdir /home/pi/Desktop/gphoto_sessions/test3
 cd /home/pi/Desktop/gphoto_sessions/test3
 
 # setup gphoto2 (add you own preset commands)
 #gphoto2 --auto-detect
 #gphoto2 --camera MODEL
+gphoto2 --camera "Canon EOS 300D (normal mode)"
 
 
 CONTINUE=1
@@ -76,7 +79,7 @@ do
 		# reset camera with a lsusb reset
 		echo "Resetting USB connection now."
 
-		$(lsusb -d 04a9:3084 | awk -F '[ :]' '{ print "/dev/bus/usb/"$2"/"$4 }' | xargs -I {} echo "/home/pi/rpi-timelapse-controller/usbreset {}")
+		$(lsusb -d 04a9:3084 | awk -F '[ :]' '{ print "/dev/bus/usb/"$2"/"$4 }' | xargs -I {} echo "/home/pi/GIT/rpi-timelapse-controller/usbreset {}")
 		
 		# restart gphoto and restart capturing
 		echo "Auto detecting cameras..."

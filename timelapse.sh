@@ -9,7 +9,7 @@ LIGHT_PIN=0
 
 # timelapse trigger delay in seconds
 # real delay is DELAY_BETWEEN_SHOTS + trigger execution time
-DELAY_BETWEEN_SHOTS=900
+DELAY_BETWEEN_SHOTS=600
 
 # enter your vender:id of camera id (lsusb in shell to get it)
 # it is used to reset usb port. (You can leave this empty.)
@@ -24,6 +24,14 @@ CAMERA_USB_VENDOR=04a9:3084
 # sudo ln ./this_script.sh /etc/init.d/rc.timelapse
 # cd /etc/init.d/
 # sudo update-rc.d rc.timelapse defaults
+# To see console output (alternative)
+# sudo nano /etc/rc.local
+# add these lines at the end, before exit 0
+# rpi-timelapse controller, blocking mode
+#sudo /home/pi/GIT/rpi-timelapse-controller/timelapse.sh
+# non-blocking mode
+#sudo /.../timelapse.sh &
+
 
 # set gpio mode to write (switch control)
 gpio mode $LIGHT_PIN out
@@ -147,15 +155,29 @@ do
 		# max 10sec to wait for dl signal
 		#gphoto2 --wait-event-and-download=10
 		#gphoto2 --new
-	else
+	fi
+
+	
+	# allow to exit infinite loop by pressing any key
+	echo "Now, you have 5 sec to exit this loop"
+	read -t 5 -n 1 -s KEY
+	if [ ! -z "$KEY" ]
+	then
+		INTERRUPT=1
+		CONTINUE=0
+		echo "Keypressed! Exiting time lapse now..."
+		exit 0;
+	fi
+
+	if [ "$SUCCEEDED" = false ]; then
+		echo "Waiting a minimum of 60sec before retrying..."
+		sleep 60
+
 		# reset camera with a lsusb reset
 		echo "Resetting USB connection now..."
 
 		$(lsusb -d 04a9:3084 | awk -F '[ :]' '{ print "/dev/bus/usb/"$2"/"$4 }' | xargs -I {} echo "/home/pi/GIT/rpi-timelapse-controller/usbreset {}")
 		# todo: use gphoto2 --reset
-
-		echo "Waiting a minimum of 60sec before retrying..."
-		sleep 60
 		
 		# restart gphoto and restart capturing
 		echo "Auto detecting cameras..."
@@ -163,16 +185,6 @@ do
 		
 		# todo: reboot after 5 tries
 		# sudo shutdown -h -F now -r
-	fi
-
-	
-	# allow to exit infinite loop by pressing any key
-	read -t 1 -n 1 -s KEY
-	if [ ! -z "$KEY" ]
-	then
-		INTERRUPT=1
-		echo "Keypressed! Exiting time lapse now..."
-		exit 0;
 	fi
 	
 	echo " "

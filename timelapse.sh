@@ -1,5 +1,23 @@
 #!/usr/bin/env bash
-###### !/bin/sh
+###!/usr/bin/env bash
+#!/bin/bash
+###!/bin/sh
+
+#/usr/bin/env bash &
+
+echo ""
+echo ""
+echo "Welcome to rpi-timelapse controller."
+echo "Now, you have 5 sec to press a key and prevent timelapse.sh from auto-launching."
+read -n 1 -t 5 -s KEY
+
+if [ ! -z "$KEY" ]
+then
+        echo "Keypressed! Exiting time lapse now. Bye bye."
+	exit 0;
+fi
+
+echo "Entering infinite loop."
 
 # the script has to be chmodded with chmod +x
 # run with sudo so it can reset itself via lsusb when gphoto crashes
@@ -9,7 +27,7 @@ LIGHT_PIN=0
 
 # timelapse trigger delay in seconds
 # real delay is DELAY_BETWEEN_SHOTS + trigger execution time
-DELAY_BETWEEN_SHOTS=600
+DELAY_BETWEEN_SHOTS=300
 
 # enter your vender:id of camera id (lsusb in shell to get it)
 # it is used to reset usb port. (You can leave this empty.)
@@ -24,17 +42,27 @@ CAMERA_USB_VENDOR=04a9:3084
 # sudo ln ./this_script.sh /etc/init.d/rc.timelapse
 # cd /etc/init.d/
 # sudo update-rc.d rc.timelapse defaults
-# To see console output (alternative)
+
+# To see console output (alternative)(no user input)
 # sudo nano /etc/rc.local
 # add these lines at the end, before exit 0
 # rpi-timelapse controller, blocking mode
-#sudo /home/pi/GIT/rpi-timelapse-controller/timelapse.sh
+# sudo /home/pi/GIT/rpi-timelapse-controller/timelapse.sh
 # non-blocking mode
 #sudo /.../timelapse.sh &
 
+# Better Alternative: Setup via ~/.bashrc so there's user input and the possibility to interrupt the loop.
+# cd ~ && sudo nano .bashrc
+# Add to bottom:
+# Start rpi-timelapse-controller
+#./GIT/rpi-timelapse-controller/timelapse.sh
+
+echo "Starting GPIO for ACDC control."
 
 # set gpio mode to write (switch control)
 gpio mode $LIGHT_PIN out
+
+echo "Starting gphoto2..."
 
 # cd into photo dir ( changeme )
 mkdir /home/pi/Desktop/gphoto_sessions/test3
@@ -45,7 +73,7 @@ gphoto2 --speed=384000
 
 # setup gphoto2 (add you own preset commands)
 
-# if not using autodetect, you must set --camera an --port
+# if not using autodetect, you must set --camera and --port
 gphoto2 --auto-detect
 #gphoto2 --camera MODEL
 #gphoto2 --camera="Canon EOS 300D (normal mode)"
@@ -56,23 +84,24 @@ gphoto2 --auto-detect
 # then use gphoto --get-config name to getpossible settings
 #gphoto2 --set-config name=value
 
-
 #/main/settings/shootingmode=4|M,8|Manual 2,0|auto,21|neutral
 gphoto2 --set-config-index /main/settings/shootingmode=4
 
 #/main/settings/ownername
-#/main/settings/capturesizeclass
+
+#/main/settings/capturesizeclass = 0|Compatibility Mode, 1|Thumbnail,2|Full Image
+gphoto2 --set-config-index /main/settings//main/settings/capturesizeclass=2
 
 # /main/settings/iso=1|100,4|200,|400
 gphoto2 --set-config-index /main/settings/iso=1
 
-#/main/settings/shutterspeed=0|Bulb,30|1/125
-gphoto2 --set-config-index /main/settings/shutterspeed=30
+#/main/settings/shutterspeed=0|Bulb,30|1/125,23|1/5,32|1/40
+gphoto2 --set-config-index /main/settings/shutterspeed=32
 
 #/main/settings/zoom
 
-#/main/settings/aperture=10|4.0,4|2.0,25|22,16|8
-gphoto2 --set-config-index /main/settings/aperture=10
+#/main/settings/aperture=10|4.0, 4|2.0, 25|22, 16|8, 18|10
+gphoto2 --set-config-index /main/settings/aperture=18
 
 #/main/settings/exposurecompensation
 
@@ -86,15 +115,8 @@ gphoto2 --set-config-index /main/settings/focusmode=3
 gphoto2 --set-config-index /main/settings/flashmode=0
 
 #/main/settings/beep
-#/main/actions/syncdatetime
-#/main/status/model
-#/main/status/datetime
-#/main/status/firmwareversion
-#/main/status/driver
-#/main/Driver/list_all_files
 
 #gphoto2 --mkdir "gphotoTimelapse"
-
 
 CONTINUE=1
 i=0
@@ -106,7 +128,7 @@ do
 
 	# Turn lights on
 	gpio write $LIGHT_PIN 1
-	sleep 5
+	sleep 1
 
 	# Take photo!
 	#gphoto2 --capture-and-download
@@ -160,7 +182,8 @@ do
 	
 	# allow to exit infinite loop by pressing any key
 	echo "Now, you have 5 sec to exit this loop"
-	read -t 5 -n 1 -s KEY
+	read -n 1 -t 5 -s KEY
+# && (sleep 5)
 	if [ ! -z "$KEY" ]
 	then
 		INTERRUPT=1
